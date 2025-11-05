@@ -7,10 +7,13 @@ class OllamaSettings(BaseSettings):
     
     host: str = "http://ollama:11434"
     model: str = "gemma3:270m"
+    embedding_model: str = Field(default="nomic-embed-text")
     timeout: int = 60
     max_retries: int = 3
     temperature: float = 0.1
 
+    class Config:
+        env_prefix = "OLLAMA_"
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
