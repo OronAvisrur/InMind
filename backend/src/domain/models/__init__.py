@@ -2,6 +2,7 @@ from .product import Product
 from .user import User, UserPreferences
 from .conversation import Conversation, Message
 from .intent import DetectedIntent, IntentDetectionResult
+from .search_result import SearchResult
 
 __all__ = [
     "Product",
@@ -11,4 +12,5 @@ __all__ = [
     "Message",
     "DetectedIntent",
     "IntentDetectionResult",
+    "SearchResult",
 ]
