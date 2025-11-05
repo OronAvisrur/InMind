@@ -5,7 +5,7 @@ from .intent import DetectedIntent, IntentDetectionResult
 
 __all__ = [
     "Product",
-    "User",
+    "User", 
     "UserPreferences",
     "Conversation",
     "Message",

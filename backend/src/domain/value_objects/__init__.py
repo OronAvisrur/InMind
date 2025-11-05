@@ -3,26 +3,18 @@ from .identifiers import (
     UserId,
     ConversationId,
     MessageId,
-    Identifier,
     ProductIdentifier,
     UserIdentifier,
     ConversationIdentifier,
     MessageIdentifier,
 )
-from .entities import (
-    IntentType,
-    EntityType,
-    Entity,
-    PriceRange,
-    MessageRole,
-)
+from .entities import IntentType, EntityType, Entity, PriceRange, MessageRole
 
 __all__ = [
     "ProductId",
     "UserId",
     "ConversationId",
     "MessageId",
-    "Identifier",
     "ProductIdentifier",
     "UserIdentifier",
     "ConversationIdentifier",
