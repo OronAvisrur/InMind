@@ -4,7 +4,7 @@ AI-powered product recommendation system that analyzes chat conversations using 
 
 ## Project Overview
 
-InMind reads user chat conversations, extracts intent and entities using NLP, performs similarity search with RAG (Retrieval-Augmented Generation), and leverages local LLM (Ollama) to provide intelligent product recommendations.
+InMind reads user chat conversations, extracts intent and entities using NLP, performs similarity search with RAG (Retrieval-Augmented Generation), and leverages local LLM (Ollama) to provide intelligent product recommendations with conversation memory and state management.
 
 ## Project Structure
 ```
@@ -22,11 +22,24 @@ in-mind/
 │   │   ├── main.py                # FastAPI application entry point
 │   │   │
 │   │   ├── domain/                # Core business logic (zero dependencies)
-│   │   │   ├── models/            # Product, User, Conversation, Message, DetectedIntent, SearchResult, RAG models
+│   │   │   ├── models/            # Business entities
+│   │   │   │   ├── product.py
+│   │   │   │   ├── user.py
+│   │   │   │   ├── conversation.py
+│   │   │   │   ├── message.py
+│   │   │   │   ├── intent.py
+│   │   │   │   ├── entity.py
+│   │   │   │   ├── search_result.py
+│   │   │   │   ├── text_chunk.py
+│   │   │   │   ├── rag.py
+│   │   │   │   ├── conversation_state.py        # ✅ NEW Phase 6
+│   │   │   │   └── memory.py                     # ✅ NEW Phase 6
 │   │   │   ├── value_objects/     # Type-safe IDs, IntentType, EntityType, MessageRole enums
 │   │   │   └── repositories/      # Abstract interfaces (Protocols)
-│   │   │       ├── embedding_repository.py      # ✅ EmbeddingRepository protocol
-│   │   │       └── vector_repository.py         # ✅ VectorRepository protocol
+│   │   │       ├── embedding_repository.py
+│   │   │       ├── vector_repository.py
+│   │   │       ├── conversation_repository.py
+│   │   │       └── conversation_state_repository.py  # ✅ NEW Phase 6
 │   │   │
 │   │   ├── application/           # Use cases and business rules
 │   │   │   └── services/
@@ -35,7 +48,8 @@ in-mind/
 │   │   │       ├── product_ingestion.py         # ✅ ProductIngestionService
 │   │   │       ├── prompt_template.py           # ✅ RAGPromptTemplates
 │   │   │       ├── context_retrieval.py         # ✅ VectorSearchStrategy, HybridRetrievalStrategy
-│   │   │       └── rag_pipeline.py              # ✅ RAGPipeline orchestrator
+│   │   │       ├── rag_pipeline.py              # ✅ RAGPipeline orchestrator
+│   │   │       └── conversation_manager.py      # ✅ NEW Phase 6
 │   │   │
 │   │   ├── infrastructure/        # External integrations
 │   │   │   ├── config/
@@ -44,21 +58,29 @@ in-mind/
 │   │   │   │   └── ollama_client.py             # ✅ OllamaClient with retry logic
 │   │   │   ├── embedding/
 │   │   │   │   └── ollama_embedder.py           # ✅ OllamaEmbeddingService
-│   │   │   └── vector_store/
-│   │   │       └── chroma_repository.py         # ✅ ChromaVectorRepository
+│   │   │   ├── vector_store/
+│   │   │   │   └── chroma_repository.py         # ✅ ChromaVectorRepository
+│   │   │   └── conversation/                    # ✅ NEW Phase 6
+│   │   │       ├── in_memory_state_repository.py
+│   │   │       └── in_memory_memory_repository.py
 │   │   │
-│   │   └── api/                   # API routes and endpoints (coming soon)
+│   │   └── api/                   # API routes and endpoints (Phase 7)
 │   │
 │   └── tests/
-│       ├── domain/                # Domain model tests
+│       ├── domain/
+│       │   ├── test_conversation_state.py       # ✅ NEW 14 tests
+│       │   └── test_memory.py                   # ✅ NEW 16 tests
 │       ├── application/
-│       │   ├── test_intent_detector.py          # ✅ 11 unit tests
-│       │   ├── test_text_chunker.py             # ✅ 10 unit tests
-│       │   ├── test_product_ingestion.py        # ✅ 10 unit tests
-│       │   └── test_rag_pipeline.py             # ✅ 11 unit tests
+│       │   ├── test_intent_detector.py          # ✅ 11 tests
+│       │   ├── test_text_chunker.py             # ✅ 10 tests
+│       │   ├── test_product_ingestion.py        # ✅ 10 tests
+│       │   ├── test_rag_pipeline.py             # ✅ 11 tests
+│       │   └── test_conversation_manager.py     # ✅ NEW 13 tests
 │       └── infrastructure/
-│           ├── test_ollama_embedder.py          # ✅ 8 unit tests
-│           └── test_chroma_repository.py        # ✅ 10 unit tests
+│           ├── test_ollama_embedder.py          # ✅ 8 tests
+│           ├── test_chroma_repository.py        # ✅ 10 tests
+│           ├── test_in_memory_state_repository.py    # ✅ NEW 12 tests
+│           └── test_in_memory_memory_repository.py   # ✅ NEW 11 tests
 │
 └── frontend/                      # Frontend service (coming soon)
     └── README.md
@@ -67,7 +89,7 @@ in-mind/
 ## Architecture
 
 **Microservices Architecture:**
-- **Backend Service**: FastAPI application with NLP and RAG capabilities
+- **Backend Service**: FastAPI application with NLP, RAG, and conversation management
 - **Ollama Service**: Local LLM inference engine 
 - **ChromaDB**: Vector database for embeddings (integrated)
 - **Frontend Service**: React/Next.js UI (coming soon)
@@ -81,6 +103,7 @@ in-mind/
 **Key Design Patterns:**
 - Repository Pattern for data access abstraction
 - Strategy Pattern for interchangeable NLP/LLM components
+- State Machine Pattern for dialog flow management
 - Dependency Injection via constructor injection
 - Protocol (Interface) for Dependency Inversion Principle
 
@@ -185,16 +208,20 @@ docker-compose up --build
 ## How It Works
 
 1. **User Input**: User sends a chat message (e.g., "I need wireless headphones under $200")
-2. **Intent Detection**: LLM analyzes message using few-shot prompting to extract:
+2. **Conversation State**: System initializes or retrieves conversation state and memory
+3. **Intent Detection**: LLM analyzes message using few-shot prompting to extract:
    - Intent type (SEARCH_PRODUCT, GET_RECOMMENDATION, etc.)
    - Entities (product_name: "headphones", price_range: "under $200", feature: "wireless")
    - Confidence scores
-3. **Embedding Generation**: User query is converted to vector embeddings using Ollama
-4. **Vector Search**: ChromaDB performs similarity search to find relevant products
-5. **Context Retrieval**: Retrieval strategy applies diversity filtering and multi-factor reranking
-6. **RAG Pipeline**: Orchestrates retrieval and generation with chain-of-thought prompting
-7. **LLM Recommendation**: LLM generates personalized recommendations based on retrieved context
-8. **Response**: System returns top product matches with explanations and confidence scores
+4. **State Transition**: Conversation manager transitions dialog state based on detected intent
+5. **Entity Collection**: Extracted entities are stored in conversation context
+6. **Embedding Generation**: User query is converted to vector embeddings using Ollama
+7. **Vector Search**: ChromaDB performs similarity search to find relevant products
+8. **Context Retrieval**: Retrieval strategy applies diversity filtering and multi-factor reranking
+9. **RAG Pipeline**: Orchestrates retrieval and generation with chain-of-thought prompting
+10. **Memory Management**: Turn history maintained with sliding window
+11. **LLM Recommendation**: LLM generates personalized recommendations based on retrieved context and conversation history
+12. **Response**: System returns recommendations with explanations, updates state, and stores turn in memory
 
 ## Project Status
 
@@ -214,7 +241,12 @@ docker-compose up --build
   - ✅ Step 4: RAG pipeline orchestrator
   - ✅ Step 5: Comprehensive unit tests (11 tests)
   - ✅ Step 6: Module exports
-- 📋 **Phase 6**: Conversation engine with memory
+- ✅ **Phase 6**: Conversation engine with memory - **COMPLETE**
+  - ✅ Step 1: Conversation state and memory domain models (14 commits)
+  - ✅ Step 2: Conversation state repository protocols (2 commits)
+  - ✅ Step 3: In-memory repository implementations (3 commits)
+  - ✅ Step 4: Conversation manager orchestrator (2 commits)
+  - ✅ Step 5: Comprehensive unit tests (66 tests total)
 - 📋 **Phase 7**: REST API endpoints
 - 📋 **Phase 8**: Testing & deployment
 
@@ -312,6 +344,38 @@ docker-compose up --build
   - Empty result handling with fallbacks
 - **11 comprehensive unit tests**
 
+### Conversation Engine ✅
+- **Conversation State Management**:
+  - ConversationState model with dialog state machine
+  - 8 dialog states: INITIAL, GREETING, COLLECTING_INFO, SEARCHING, RECOMMENDING, COMPARING, CLARIFYING, CLOSING
+  - 4 conversation statuses: ACTIVE, PAUSED, COMPLETED, ABANDONED
+  - ConversationContext for entity collection and search history
+  - Automatic activity tracking and state transitions
+  - 14 unit tests for state models
+- **Conversation Memory**:
+  - ConversationMemory with sliding window history
+  - ConversationTurn tracking with user/assistant exchanges
+  - Context window extraction with token estimation
+  - Configurable max_turns for memory management
+  - Processing time tracking per turn
+  - 16 unit tests for memory models
+- **Repository Implementations**:
+  - InMemoryStateRepository for conversation state persistence
+  - InMemoryMemoryRepository for turn history storage
+  - Active conversation filtering by user
+  - Automatic cleanup of abandoned conversations
+  - 23 unit tests for repositories
+- **Conversation Manager Orchestrator**:
+  - Full conversation flow orchestration
+  - Integration of intent detection + RAG pipeline
+  - Automatic state transitions based on intent
+  - Entity collection from detected intents
+  - Memory management with context window
+  - Multi-turn conversation support
+  - Greeting, clarification, and closing dialog handlers
+  - Filter building from collected entities
+  - 13 unit tests with mocks
+
 ### Configuration Management ✅
 - Pydantic-settings for type-safe configuration
 - Environment variable support
@@ -331,6 +395,9 @@ docker-compose up --build
 - **RetrievedContext**: RAG context with products and relevance
 - **RAGRequest**: User query with retrieval parameters
 - **RAGResponse**: Recommendations with reasoning and confidence
+- **ConversationState**: Dialog state and status tracking (NEW Phase 6)
+- **ConversationMemory**: Turn history with sliding window (NEW Phase 6)
+- **ConversationTurn**: Single user-assistant exchange (NEW Phase 6)
 
 ### Value Objects
 - **Identifiers**: Type-safe UUIDs for all entities
@@ -338,6 +405,8 @@ docker-compose up --build
 - **EntityType**: Enum for extracted entities
 - **MessageRole**: USER, ASSISTANT, SYSTEM
 - **TextChunk**: Text chunks with position metadata
+- **DialogState**: Enum for conversation flow states (NEW Phase 6)
+- **ConversationStatus**: Enum for conversation lifecycle (NEW Phase 6)
 
 ## API Endpoints
 
@@ -348,6 +417,9 @@ docker-compose up --build
 
 ### Coming Soon (Phase 7)
 - `POST /api/v1/chat` - Send chat message and get recommendations
+- `POST /api/v1/conversations/start` - Start new conversation
+- `GET /api/v1/conversations/{id}` - Get conversation state
+- `POST /api/v1/conversations/{id}/end` - End conversation
 - `POST /api/v1/intents/detect` - Detect intent from text
 - `GET /api/v1/products` - List products
 - `GET /api/v1/products/{id}` - Get product details
@@ -388,8 +460,17 @@ API_PORT=8000
 
 ## Test Coverage
 
-**Total Tests: 60**
-- Domain Models: 10 tests
+**Total Tests: 126**
+- Domain Models: 40 tests (30 new in Phase 6)
+- Application Services: 45 tests (13 new in Phase 6)
+- Infrastructure: 41 tests (23 new in Phase 6)
+
+**Test Breakdown:**
+- Conversation State Models: 14 tests
+- Conversation Memory Models: 16 tests
+- In-Memory State Repository: 12 tests
+- In-Memory Memory Repository: 11 tests
+- Conversation Manager: 13 tests
 - Intent Detection: 11 tests
 - Text Chunking: 10 tests
 - Product Ingestion: 10 tests
@@ -403,6 +484,8 @@ All tests passing with comprehensive coverage of:
 - Error handling
 - Edge cases
 - Async operations
+- State transitions
+- Memory management
 
 ## Troubleshooting
 
