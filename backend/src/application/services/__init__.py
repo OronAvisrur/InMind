@@ -15,6 +15,10 @@ from src.application.services.rag_pipeline import (
     RAGPipeline,
     RAGPipelineConfig
 )
+from src.application.services.conversation_manager import (
+    ConversationManager,
+    ConversationManagerConfig
+)
 
 __all__ = [
     "IntentDetectorService",
@@ -28,4 +32,6 @@ __all__ = [
     "RetrievalConfig",
     "RAGPipeline",
     "RAGPipelineConfig",
+    "ConversationManager",
+    "ConversationManagerConfig",
 ]
