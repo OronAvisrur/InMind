@@ -22,7 +22,7 @@ in-mind/
 │   │   ├── main.py                # FastAPI application entry point
 │   │   │
 │   │   ├── domain/                # Core business logic (zero dependencies)
-│   │   │   ├── models/            # Product, User, Conversation, Message, DetectedIntent, SearchResult
+│   │   │   ├── models/            # Product, User, Conversation, Message, DetectedIntent, SearchResult, RAG models
 │   │   │   ├── value_objects/     # Type-safe IDs, IntentType, EntityType, MessageRole enums
 │   │   │   └── repositories/      # Abstract interfaces (Protocols)
 │   │   │       ├── embedding_repository.py      # ✅ EmbeddingRepository protocol
@@ -32,7 +32,10 @@ in-mind/
 │   │   │   └── services/
 │   │   │       ├── intent_detector.py           # ✅ IntentDetectorService
 │   │   │       ├── text_chunker.py              # ✅ TextChunker
-│   │   │       └── product_ingestion.py         # ✅ ProductIngestionService
+│   │   │       ├── product_ingestion.py         # ✅ ProductIngestionService
+│   │   │       ├── prompt_template.py           # ✅ RAGPromptTemplates
+│   │   │       ├── context_retrieval.py         # ✅ VectorSearchStrategy, HybridRetrievalStrategy
+│   │   │       └── rag_pipeline.py              # ✅ RAGPipeline orchestrator
 │   │   │
 │   │   ├── infrastructure/        # External integrations
 │   │   │   ├── config/
@@ -51,7 +54,8 @@ in-mind/
 │       ├── application/
 │       │   ├── test_intent_detector.py          # ✅ 11 unit tests
 │       │   ├── test_text_chunker.py             # ✅ 10 unit tests
-│       │   └── test_product_ingestion.py        # ✅ 10 unit tests
+│       │   ├── test_product_ingestion.py        # ✅ 10 unit tests
+│       │   └── test_rag_pipeline.py             # ✅ 11 unit tests
 │       └── infrastructure/
 │           ├── test_ollama_embedder.py          # ✅ 8 unit tests
 │           └── test_chroma_repository.py        # ✅ 10 unit tests
@@ -85,7 +89,7 @@ in-mind/
 - **Language**: Python 3.11+
 - **Web Framework**: FastAPI
 - **Validation**: Pydantic V2
-- **LLM**: Ollama (local inference) 
+- **LLM**: Ollama (local inference) with gemma3:270m
 - **Embeddings**: Ollama nomic-embed-text
 - **Vector DB**: ChromaDB with cosine similarity
 - **HTTP Client**: httpx with tenacity retry logic
@@ -108,7 +112,7 @@ cd in-mind
 docker-compose up --build -d
 
 # Pull LLM models (first time only)
-docker exec -it inmind-ollama ollama pull llama2
+docker exec -it inmind-ollama ollama pull gemma3:270m
 docker exec -it inmind-ollama ollama pull nomic-embed-text
 
 # Check services are running
@@ -187,9 +191,10 @@ docker-compose up --build
    - Confidence scores
 3. **Embedding Generation**: User query is converted to vector embeddings using Ollama
 4. **Vector Search**: ChromaDB performs similarity search to find relevant products
-5. **RAG Retrieval**: Top matching products are retrieved with relevance scores
-6. **LLM Recommendation**: LLM generates personalized recommendations based on retrieved context
-7. **Response**: System returns top product matches with explanations
+5. **Context Retrieval**: Retrieval strategy applies diversity filtering and multi-factor reranking
+6. **RAG Pipeline**: Orchestrates retrieval and generation with chain-of-thought prompting
+7. **LLM Recommendation**: LLM generates personalized recommendations based on retrieved context
+8. **Response**: System returns top product matches with explanations and confidence scores
 
 ## Project Status
 
@@ -202,7 +207,13 @@ docker-compose up --build
   - ✅ Step 1: Embedding service with Ollama (9 commits)
   - ✅ Step 2: Vector repository with ChromaDB (8 commits)
   - ✅ Step 3: Product ingestion pipeline (6 commits)
-- 📋 **Phase 5**: RAG system implementation
+- ✅ **Phase 5**: RAG system implementation - **COMPLETE**
+  - ✅ Step 1: RAG domain models (RetrievedContext, RAGRequest, RAGResponse)
+  - ✅ Step 2: Prompt template system with few-shot examples
+  - ✅ Step 3: Context retrieval strategies (Vector + Hybrid)
+  - ✅ Step 4: RAG pipeline orchestrator
+  - ✅ Step 5: Comprehensive unit tests (11 tests)
+  - ✅ Step 6: Module exports
 - 📋 **Phase 6**: Conversation engine with memory
 - 📋 **Phase 7**: REST API endpoints
 - 📋 **Phase 8**: Testing & deployment
@@ -276,6 +287,31 @@ docker-compose up --build
 - Comprehensive error handling
 - 11 unit tests with 100% pass rate
 
+### RAG System ✅
+- **RAG Domain Models**:
+  - RetrievedContext: Product results with relevance scores
+  - RAGRequest: Query parameters with filters
+  - RAGResponse: Recommendations with reasoning and confidence
+  - PromptContext: LLM prompt assembly
+- **Prompt Template System**:
+  - Flexible template manager with system/user prompts
+  - Few-shot examples for recommendation generation
+  - Product comparison templates
+  - Context formatting helpers
+- **Context Retrieval Strategies**:
+  - VectorSearchStrategy with diversity filtering
+  - HybridRetrievalStrategy with multi-factor reranking
+  - Category/brand/price-based diversity scoring
+  - Relevance, price, and rating weight balancing
+- **RAG Pipeline Orchestrator**:
+  - Full retrieval + generation workflow
+  - Chain-of-thought prompting
+  - Optional self-consistency sampling (multiple inference passes)
+  - Confidence score calculation
+  - Product comparison support
+  - Empty result handling with fallbacks
+- **11 comprehensive unit tests**
+
 ### Configuration Management ✅
 - Pydantic-settings for type-safe configuration
 - Environment variable support
@@ -292,6 +328,9 @@ docker-compose up --build
 - **DetectedIntent**: Intent classification result from NLP analysis
 - **Entity**: Extracted entities with confidence scores
 - **SearchResult**: Vector search results with products and relevance scores
+- **RetrievedContext**: RAG context with products and relevance
+- **RAGRequest**: User query with retrieval parameters
+- **RAGResponse**: Recommendations with reasoning and confidence
 
 ### Value Objects
 - **Identifiers**: Type-safe UUIDs for all entities
@@ -349,13 +388,14 @@ API_PORT=8000
 
 ## Test Coverage
 
-**Total Tests: 49**
+**Total Tests: 60**
 - Domain Models: 10 tests
 - Intent Detection: 11 tests
 - Text Chunking: 10 tests
 - Product Ingestion: 10 tests
 - Embedding Service: 8 tests
 - Vector Repository: 10 tests
+- RAG Pipeline: 11 tests
 
 All tests passing with comprehensive coverage of:
 - Business logic
