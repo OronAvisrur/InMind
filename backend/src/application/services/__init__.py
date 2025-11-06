@@ -1,3 +1,9 @@
-from .intent_detector import IntentDetectorService, IntentDetectionError
+from .intent_detector import IntentDetectorService
+from .text_chunker import TextChunker, TextChunk, ChunkConfig
 
-__all__ = ["IntentDetectorService", "IntentDetectionError"]
+__all__ = [
+    "IntentDetectorService",
+    "TextChunker",
+    "TextChunk",
+    "ChunkConfig",
+]
