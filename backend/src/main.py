@@ -1,67 +1,50 @@
-from fastapi import FastAPI, HTTPException
-from src.infrastructure.config.settings import get_settings, Settings
-from functools import lru_cache
-from typing import Dict, Any
-
-@lru_cache()
-def get_cached_settings() -> Settings:
-    return get_settings()
-
-settings = get_cached_settings()
-
-app = FastAPI(
-    title=settings.app_name,
-    version="0.1.0",
-    description="AI-powered product recommendation system using NLP, RAG, and local LLM"
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from src.infrastructure.config.settings import Settings
+from src.api.dependencies import get_settings
+from src.api.routes import health_router, chat_router, product_router, intent_router
+from src.api.middleware import (
+    http_exception_handler,
+    validation_exception_handler,
+    general_exception_handler,
 )
 
 
+settings = get_settings()
+
+app = FastAPI(
+    title=settings.app_name,
+    version="1.0.0",
+    description="AI-powered product recommendation system using NLP, RAG, and local LLM",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
+
+app.include_router(health_router)
+app.include_router(chat_router)
+app.include_router(product_router)
+app.include_router(intent_router)
+
+
 @app.get("/")
-def read_root() -> Dict[str, str]:
+def read_root():
     return {
         "message": "InMind API",
-        "version": "0.1.0",
-        "status": "running"
+        "version": "1.0.0",
+        "status": "running",
+        "documentation": "/docs"
     }
-
-
-@app.get("/health")
-def health_check() -> Dict[str, Any]:
-    current_settings = get_cached_settings()
-    return {
-        "status": "healthy",
-        "service": current_settings.app_name,
-        "version": "0.1.0",
-        "debug": current_settings.debug
-    }
-
-
-@app.get("/ollama/health")
-def ollama_health() -> Dict[str, Any]:
-    from src.infrastructure.llm import OllamaClient
-    
-    current_settings = get_cached_settings()
-    
-    try:
-        client = OllamaClient(current_settings.ollama)
-        is_healthy = client.health_check()
-        
-        if is_healthy:
-            models = client.list_models()
-            client.close()
-            return {
-                "status": "healthy",
-                "ollama_host": current_settings.ollama.host,
-                "available_models": models,
-                "configured_model": current_settings.ollama.model
-            }
-        else:
-            client.close()
-            return {
-                "status": "unhealthy",
-                "ollama_host": current_settings.ollama.host,
-                "error": "Ollama service not responding"
-            }
-    
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Ollama service unavailable: {str(e)}")
