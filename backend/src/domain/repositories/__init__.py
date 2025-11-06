@@ -3,6 +3,10 @@ from .product_repository import ProductRepository
 from .user_repository import UserRepository
 from .embedding_repository import EmbeddingRepository
 from .vector_repository import VectorRepository
+from .conversation_state_repository import (
+    ConversationStateRepository,
+    ConversationMemoryRepository
+)
 
 __all__ = [
     "ConversationRepository",
@@ -10,4 +14,6 @@ __all__ = [
     "UserRepository",
     "EmbeddingRepository",
     "VectorRepository",
+    "ConversationStateRepository",
+    "ConversationMemoryRepository",
 ]
