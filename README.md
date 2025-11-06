@@ -22,26 +22,39 @@ in-mind/
 │   │   ├── main.py                # FastAPI application entry point
 │   │   │
 │   │   ├── domain/                # Core business logic (zero dependencies)
-│   │   │   ├── models/            # Product, User, Conversation, Message, DetectedIntent, Entity
+│   │   │   ├── models/            # Product, User, Conversation, Message, DetectedIntent, SearchResult
 │   │   │   ├── value_objects/     # Type-safe IDs, IntentType, EntityType, MessageRole enums
 │   │   │   └── repositories/      # Abstract interfaces (Protocols)
+│   │   │       ├── embedding_repository.py      # ✅ EmbeddingRepository protocol
+│   │   │       └── vector_repository.py         # ✅ VectorRepository protocol
 │   │   │
 │   │   ├── application/           # Use cases and business rules
 │   │   │   └── services/
-│   │   │       └── intent_detector.py  # ✅ IntentDetectorService
+│   │   │       ├── intent_detector.py           # ✅ IntentDetectorService
+│   │   │       ├── text_chunker.py              # ✅ TextChunker
+│   │   │       └── product_ingestion.py         # ✅ ProductIngestionService
 │   │   │
 │   │   ├── infrastructure/        # External integrations
 │   │   │   ├── config/
-│   │   │   │   └── settings.py    # ✅ Pydantic settings
-│   │   │   └── llm/
-│   │   │       └── ollama_client.py  # ✅ OllamaClient with retry logic
+│   │   │   │   └── settings.py                  # ✅ Pydantic settings
+│   │   │   ├── llm/
+│   │   │   │   └── ollama_client.py             # ✅ OllamaClient with retry logic
+│   │   │   ├── embedding/
+│   │   │   │   └── ollama_embedder.py           # ✅ OllamaEmbeddingService
+│   │   │   └── vector_store/
+│   │   │       └── chroma_repository.py         # ✅ ChromaVectorRepository
 │   │   │
 │   │   └── api/                   # API routes and endpoints (coming soon)
 │   │
 │   └── tests/
 │       ├── domain/                # Domain model tests
-│       └── application/
-│           └── test_intent_detector.py  # ✅ 11 unit tests
+│       ├── application/
+│       │   ├── test_intent_detector.py          # ✅ 11 unit tests
+│       │   ├── test_text_chunker.py             # ✅ 10 unit tests
+│       │   └── test_product_ingestion.py        # ✅ 10 unit tests
+│       └── infrastructure/
+│           ├── test_ollama_embedder.py          # ✅ 8 unit tests
+│           └── test_chroma_repository.py        # ✅ 10 unit tests
 │
 └── frontend/                      # Frontend service (coming soon)
     └── README.md
@@ -52,8 +65,8 @@ in-mind/
 **Microservices Architecture:**
 - **Backend Service**: FastAPI application with NLP and RAG capabilities
 - **Ollama Service**: Local LLM inference engine 
+- **ChromaDB**: Vector database for embeddings (integrated)
 - **Frontend Service**: React/Next.js UI (coming soon)
-- **ChromaDB Service**: Vector database for embeddings (coming soon)
 
 **Clean Architecture with SOLID Principles:**
 - **Domain Layer**: Pure business logic, framework-agnostic
@@ -73,7 +86,8 @@ in-mind/
 - **Web Framework**: FastAPI
 - **Validation**: Pydantic V2
 - **LLM**: Ollama (local inference) 
-- **Vector DB**: ChromaDB (for RAG) - Coming soon
+- **Embeddings**: Ollama nomic-embed-text
+- **Vector DB**: ChromaDB with cosine similarity
 - **HTTP Client**: httpx with tenacity retry logic
 - **Containerization**: Docker & Docker Compose
 
@@ -93,8 +107,9 @@ cd in-mind
 # Start all services
 docker-compose up --build -d
 
-# Pull LLM model (first time only)
+# Pull LLM models (first time only)
 docker exec -it inmind-ollama ollama pull llama2
+docker exec -it inmind-ollama ollama pull nomic-embed-text
 
 # Check services are running
 docker-compose ps
@@ -134,8 +149,10 @@ pytest tests/ -v
 # Run with coverage
 pytest tests/ --cov=src --cov-report=term-missing
 
-# Run specific test file
-pytest tests/application/test_intent_detector.py -v
+# Run specific test suites
+pytest tests/application/ -v
+pytest tests/infrastructure/ -v
+pytest tests/domain/ -v
 
 # Exit container
 exit
@@ -168,18 +185,23 @@ docker-compose up --build
    - Intent type (SEARCH_PRODUCT, GET_RECOMMENDATION, etc.)
    - Entities (product_name: "headphones", price_range: "under $200", feature: "wireless")
    - Confidence scores
-3. **RAG Search**: System searches vector database for relevant products using embeddings 
-4. **LLM Recommendation**: LLM generates personalized product recommendations based on context 
-5. **Response**: System returns top product matches with explanations
+3. **Embedding Generation**: User query is converted to vector embeddings using Ollama
+4. **Vector Search**: ChromaDB performs similarity search to find relevant products
+5. **RAG Retrieval**: Top matching products are retrieved with relevance scores
+6. **LLM Recommendation**: LLM generates personalized recommendations based on retrieved context
+7. **Response**: System returns top product matches with explanations
 
 ## Project Status
 
 - ✅ **Phase 1**: Project structure, FastAPI skeleton, Docker setup
 - ✅ **Phase 2**: Domain models, value objects, repository protocols, comprehensive tests
 - ✅ **Phase 3**: NLP module - Intent & Entity detection with Ollama
-  - ✅ Step 1: Ollama infrastructure with Docker Compose
-  - ✅ Step 2: IntentDetectorService with few-shot prompting
-- 📋 **Phase 4**: Vector database & embeddings (ChromaDB)
+  - ✅ Ollama infrastructure with Docker Compose
+  - ✅ IntentDetectorService with few-shot prompting
+- ✅ **Phase 4**: Vector database & embeddings (ChromaDB) - **COMPLETE**
+  - ✅ Step 1: Embedding service with Ollama (9 commits)
+  - ✅ Step 2: Vector repository with ChromaDB (8 commits)
+  - ✅ Step 3: Product ingestion pipeline (6 commits)
 - 📋 **Phase 5**: RAG system implementation
 - 📋 **Phase 6**: Conversation engine with memory
 - 📋 **Phase 7**: REST API endpoints
@@ -193,6 +215,41 @@ docker-compose up --build
 - Context manager support
 - Custom exceptions (OllamaConnectionError, OllamaTimeoutError)
 - Support for both `generate()` and `chat()` methods
+
+### Embedding Service ✅
+- OllamaEmbeddingService with async operations
+- Support for single text and batch embedding generation
+- Retry logic with exponential backoff (3 attempts)
+- Context manager for resource cleanup
+- Configurable embedding model (nomic-embed-text)
+- EmbeddingRepository protocol for dependency inversion
+- 8 comprehensive unit tests
+
+### Vector Database ✅
+- ChromaVectorRepository with persistent storage
+- Cosine similarity search for product matching
+- Metadata filtering support
+- Product addition, deletion, and count operations
+- SearchResult model with relevance scores (0.0-1.0)
+- VectorRepository protocol for abstraction
+- 10 comprehensive unit tests
+
+### Text Chunking ✅
+- TextChunker service for long descriptions
+- Configurable chunk size and overlap
+- Smart word boundary detection
+- Position tracking for each chunk
+- ChunkConfig for customization
+- 10 comprehensive unit tests
+
+### Product Ingestion Pipeline ✅
+- ProductIngestionService orchestrating full pipeline
+- Batch and single product ingestion
+- Product search with embedding generation
+- Product removal and count retrieval
+- Metadata extraction and storage
+- Dependency injection architecture
+- 10 comprehensive unit tests
 
 ### Intent Detection Service ✅
 - Few-shot prompting with 5 comprehensive examples
@@ -222,7 +279,7 @@ docker-compose up --build
 ### Configuration Management ✅
 - Pydantic-settings for type-safe configuration
 - Environment variable support
-- OllamaSettings (host, model, timeout, temperature)
+- OllamaSettings (host, model, embedding_model, timeout, temperature)
 - Application settings (app_name, debug, api_host, api_port)
 
 ## Domain Models
@@ -234,12 +291,14 @@ docker-compose up --build
 - **Message**: Individual chat messages (user/assistant/system)
 - **DetectedIntent**: Intent classification result from NLP analysis
 - **Entity**: Extracted entities with confidence scores
+- **SearchResult**: Vector search results with products and relevance scores
 
 ### Value Objects
 - **Identifiers**: Type-safe UUIDs for all entities
 - **IntentType**: Enum for user intents
 - **EntityType**: Enum for extracted entities
 - **MessageRole**: USER, ASSISTANT, SYSTEM
+- **TextChunk**: Text chunks with position metadata
 
 ## API Endpoints
 
@@ -254,12 +313,14 @@ docker-compose up --build
 - `GET /api/v1/products` - List products
 - `GET /api/v1/products/{id}` - Get product details
 - `POST /api/v1/products/search` - Search products with filters
+- `POST /api/v1/products/ingest` - Ingest products into vector database
 
 ## Environment Variables
 ```bash
 # Ollama Configuration
 OLLAMA_HOST=http://ollama:11434
-OLLAMA_MODEL=llama2
+OLLAMA_MODEL=gemma3:270m
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 OLLAMA_TIMEOUT=60
 OLLAMA_MAX_RETRIES=3
 OLLAMA_TEMPERATURE=0.1
@@ -284,6 +345,24 @@ API_PORT=8000
 - Port: 11434
 - Persistent volume for models
 - Privileged mode for GPU access
+- Models: gemma3:270m, nomic-embed-text
+
+## Test Coverage
+
+**Total Tests: 49**
+- Domain Models: 10 tests
+- Intent Detection: 11 tests
+- Text Chunking: 10 tests
+- Product Ingestion: 10 tests
+- Embedding Service: 8 tests
+- Vector Repository: 10 tests
+
+All tests passing with comprehensive coverage of:
+- Business logic
+- Service integration
+- Error handling
+- Edge cases
+- Async operations
 
 ## Troubleshooting
 
@@ -298,8 +377,9 @@ docker-compose logs ollama
 # Restart Ollama
 docker-compose restart ollama
 
-# Pull model again
-docker exec -it inmind-ollama ollama pull llama2
+# Pull models again
+docker exec -it inmind-ollama ollama pull gemma3:270m
+docker exec -it inmind-ollama ollama pull nomic-embed-text
 ```
 
 ### Backend service errors
@@ -314,6 +394,18 @@ docker-compose restart backend
 docker-compose up --build backend
 ```
 
+### ChromaDB persistence issues
+```bash
+# Check if data directory exists
+ls -la data/chroma
+
+# Ensure proper permissions
+chmod -R 755 data/
+
+# Restart services
+docker-compose restart backend
+```
+
 ### Tests failing
 ```bash
 # Ensure all dependencies are installed
@@ -321,6 +413,9 @@ docker exec -it inmind-backend pip list
 
 # Run tests with verbose output
 docker exec -it inmind-backend pytest tests/ -v -s
+
+# Run specific test suite
+docker exec -it inmind-backend pytest tests/infrastructure/ -v
 ```
 
 ## Contributing
@@ -331,6 +426,7 @@ docker exec -it inmind-backend pytest tests/ -v -s
 4. Write unit tests for all new services
 5. Use Pydantic models for data validation
 6. Follow clean architecture separation
+7. One file per commit for better tracking
 
 ## License
 
@@ -339,5 +435,6 @@ MIT
 ## Acknowledgments
 
 - Ollama for local LLM inference
+- ChromaDB for vector database
 - FastAPI for the web framework
 - Pydantic for data validation
