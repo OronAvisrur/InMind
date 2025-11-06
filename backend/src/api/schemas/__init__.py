@@ -26,3 +26,51 @@ class SuccessResponse(BaseModel):
     success: bool = Field(description="Operation success status")
     message: str = Field(description="Success message")
     data: Optional[dict] = Field(default=None, description="Response data")
+
+
+from src.api.schemas.chat import (
+    ChatRequest,
+    ChatResponse,
+    ConversationStartRequest,
+    ConversationStartResponse,
+    ConversationEndRequest,
+    ConversationEndResponse,
+)
+
+from src.api.schemas.product import (
+    ProductResponse,
+    ProductListResponse,
+    ProductSearchRequest,
+    ProductSearchResponse,
+    ProductIngestRequest,
+    ProductIngestResponse,
+)
+
+from src.api.schemas.intent import (
+    EntityResponse,
+    IntentDetectRequest,
+    IntentDetectResponse,
+)
+
+
+__all__ = [
+    "HealthResponse",
+    "OllamaHealthResponse",
+    "ErrorResponse",
+    "SuccessResponse",
+    "ChatRequest",
+    "ChatResponse",
+    "ConversationStartRequest",
+    "ConversationStartResponse",
+    "ConversationEndRequest",
+    "ConversationEndResponse",
+    "ProductResponse",
+    "ProductListResponse",
+    "ProductSearchRequest",
+    "ProductSearchResponse",
+    "ProductIngestRequest",
+    "ProductIngestResponse",
+    "EntityResponse",
+    "IntentDetectRequest",
+    "IntentDetectResponse",
+]
