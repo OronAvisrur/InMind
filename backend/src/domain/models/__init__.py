@@ -12,6 +12,17 @@ from src.domain.models.rag import (
     RAGResponse,
     PromptContext
 )
+from src.domain.models.conversation_state import (
+    ConversationState,
+    ConversationStatus,
+    DialogState,
+    ConversationContext
+)
+from src.domain.models.memory import (
+    ConversationMemory,
+    ConversationTurn,
+    MemoryConfig
+)
 
 __all__ = [
     "Product",
@@ -27,4 +38,11 @@ __all__ = [
     "RAGRequest",
     "RAGResponse",
     "PromptContext",
+    "ConversationState",
+    "ConversationStatus",
+    "DialogState",
+    "ConversationContext",
+    "ConversationMemory",
+    "ConversationTurn",
+    "MemoryConfig",
 ]
