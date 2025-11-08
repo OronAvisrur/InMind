@@ -64,7 +64,22 @@ in-mind/
 │   │   │       ├── in_memory_state_repository.py
 │   │   │       └── in_memory_memory_repository.py
 │   │   │
-│   │   └── api/                   # API routes and endpoints (Phase 7)
+│   │   └── api/                   # API routes and endpoints ✅ Phase 7
+│   │       ├── routes/
+│   │       │   ├── health.py                    # ✅ Health check endpoints
+│   │       │   ├── chat.py                      # ✅ Conversation endpoints
+│   │       │   ├── product.py                   # ✅ Product CRUD endpoints
+│   │       │   └── intent.py                    # ✅ Intent detection endpoint
+│   │       ├── schemas/
+│   │       │   ├── chat.py                      # ✅ Chat request/response schemas
+│   │       │   ├── product.py                   # ✅ Product schemas
+│   │       │   └── intent.py                    # ✅ Intent schemas
+│   │       ├── dependencies.py                  # ✅ Dependency injection container
+│   │       ├── middleware.py                    # ✅ Error handling middleware
+│   │       └── __init__.py
+│   │
+│   ├── scripts/
+│   │   └── test_api.py            # Manual API testing script
 │   │
 │   └── tests/
 │       ├── domain/
@@ -247,7 +262,14 @@ docker-compose up --build
   - ✅ Step 3: In-memory repository implementations (3 commits)
   - ✅ Step 4: Conversation manager orchestrator (2 commits)
   - ✅ Step 5: Comprehensive unit tests (66 tests total)
-- 📋 **Phase 7**: REST API endpoints
+- ✅ **Phase 7**: REST API endpoints - **COMPLETE**
+  - ✅ Step 1-5: API schemas (chat, product, intent) (5 commits)
+  - ✅ Step 6: Dependency injection container (1 commit)
+  - ✅ Step 7-10: Routers (health, chat, product, intent) (4 commits)
+  - ✅ Step 11-12: Routes exports and error middleware (2 commits)
+  - ✅ Step 13-14: FastAPI integration and API exports (2 commits)
+  - ✅ Step 15: Manual testing script in scripts/ folder (2 commits)
+  - ✅ 16 endpoints with full CRUD, filtering, and pagination
 - 📋 **Phase 8**: Testing & deployment
 
 ## Features Implemented
@@ -376,6 +398,41 @@ docker-compose up --build
   - Filter building from collected entities
   - 13 unit tests with mocks
 
+### REST API (Phase 7) ✅
+- **API Schemas with Pydantic V2**:
+  - Base schemas: HealthResponse, ErrorResponse, SuccessResponse
+  - Chat schemas: ChatRequest/Response, ConversationStart/End
+  - Product schemas: ProductResponse, ProductSearch, ProductIngest
+  - Intent schemas: IntentDetectRequest/Response, EntityResponse
+  - Comprehensive field validation and descriptions
+- **Dependency Injection Container**:
+  - Factory functions for all services and repositories
+  - Singleton settings with lru_cache
+  - Complete dependency graph wiring
+  - FastAPI-compatible injection
+- **API Routers**:
+  - Health router: Backend and Ollama health checks
+  - Chat router: Full conversation lifecycle (4 endpoints)
+  - Product router: CRUD with search and filters (4 endpoints)
+  - Intent router: Standalone NLP analysis (1 endpoint)
+  - 13 total endpoints across 4 routers
+- **Error Handling Middleware**:
+  - HTTPException handler with structured responses
+  - Validation error handler for Pydantic errors
+  - General exception handler for unexpected errors
+  - Logging for all error types
+  - Consistent error format with timestamps
+- **CORS and FastAPI Integration**:
+  - CORS middleware with permissive settings
+  - Automatic OpenAPI documentation at /docs
+  - Request/response validation
+  - Proper HTTP status codes
+- **Manual Testing Script**:
+  - Comprehensive test suite in scripts/test_api.py
+  - Tests for all endpoint categories
+  - Error handling verification
+  - Async httpx client usage
+
 ### Configuration Management ✅
 - Pydantic-settings for type-safe configuration
 - Environment variable support
@@ -410,21 +467,38 @@ docker-compose up --build
 
 ## API Endpoints
 
-### Current Endpoints
+### Health Checks
 - `GET /` - API information and version
 - `GET /health` - Backend service health check
-- `GET /ollama/health` - Ollama service health check with model listing
+- `GET /health/ollama` - Ollama service health check with model listing
 
-### Coming Soon (Phase 7)
-- `POST /api/v1/chat` - Send chat message and get recommendations
+### Conversation Management
 - `POST /api/v1/conversations/start` - Start new conversation
+- `POST /api/v1/conversations/{id}/message` - Send message and get AI response
 - `GET /api/v1/conversations/{id}` - Get conversation state
 - `POST /api/v1/conversations/{id}/end` - End conversation
-- `POST /api/v1/intents/detect` - Detect intent from text
-- `GET /api/v1/products` - List products
-- `GET /api/v1/products/{id}` - Get product details
-- `POST /api/v1/products/search` - Search products with filters
+
+### Product Management
 - `POST /api/v1/products/ingest` - Ingest products into vector database
+- `POST /api/v1/products/search` - Search products with filters (category, brand, price, rating)
+- `GET /api/v1/products` - List products with pagination
+- `GET /api/v1/products/{id}` - Get product details
+
+### Intent Detection
+- `POST /api/v1/intents/detect` - Detect intent and extract entities from text
+
+### Testing
+```bash
+# Run manual API testing script
+docker exec -it inmind-backend python scripts/test_api.py
+
+# Or test endpoints individually with curl:
+curl http://localhost:8000/health
+curl http://localhost:8000/health/ollama
+curl -X POST http://localhost:8000/api/v1/conversations/start \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "test-user-123"}'
+```
 
 ## Environment Variables
 ```bash
