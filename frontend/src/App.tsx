@@ -1,9 +1,7 @@
-import { useState } from 'react'
+import ChatWindow from './components/ChatWindow'
 import './App.css'
 
 function App() {
-  const [conversationId, setConversationId] = useState<string | null>(null)
-
   return (
     <div className="app">
       <header className="app-header">
@@ -12,9 +10,7 @@ function App() {
       </header>
       
       <main className="app-main">
-        <div className="chat-container">
-          <p>Chat interface coming soon...</p>
-        </div>
+        <ChatWindow />
       </main>
       
       <footer className="app-footer">
